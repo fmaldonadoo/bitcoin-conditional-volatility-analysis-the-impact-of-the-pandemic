@@ -1,0 +1,135 @@
+---
+title: "DATATHON"
+author: "Nathan Lopes"
+date: "2023-11-20"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(BatchGetSymbols)
+library(rugarch)
+library(tidyverse)
+library(ggthemes)
+library(FinTS)
+library(WriteXLS)
+library(xtable)
+library(tbl2xts)
+library(dplyr)
+```
+
+```{r}
+tickers = c('BTC-USD')
+```
+
+```{r}
+assets <- BatchGetSymbols(tickers,
+                          first.date = '2013-11-20',
+                          last.date = Sys.time(),
+                          type.return = 'log',
+                          freq.data = 'daily')
+```
+
+```{r}
+assets <- assets[[2]]
+```
+
+
+```{r}
+BTC = assets%>% filter(ticker=='BTC-USD')
+```
+
+```{r}
+retorno_BTC = BTC%>%
+  select(ref.date,ticker,ret.closing.prices)
+
+RABS.BTC <- ggplot(retorno_BTC) +
+  geom_line(aes(x = ref.date, y = abs(ret.closing.prices)), color='#006600') +
+  labs( x = "" , y = 'Retornos absolutos', title="Retornos abs da BTC-USD",
+        subtitle = "20/11/2013 ate 20/11/2023", 
+        caption = "Fonte: Yahoo Finance")+
+  theme_economist()
+
+RABS.BTC
+```
+
+```{r}
+R.BTC = ggplot(retorno_BTC, aes(ref.date, ret.closing.prices))+
+  geom_line()+
+  labs (x = '', y = 'Retornos', title = 'Retornos diarios BTC', subtitle = '20/11/2013 ate 20/11/2023', caption = 'Fonte: Yahoo')+
+  theme_economist()
+
+R.BTC
+```
+
+```{r}
+daily_returns <- BTC %>%
+select(ref.date,ret.closing.prices)
+
+date_btc <- daily_returns %>%
+select(ref.date) %>%
+rename(date = ref.date) %>%
+slice(-1)
+
+daily_returns <- daily_returns %>%
+select(ret.closing.prices) %>%
+slice(-1)
+
+garch.specstd = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = FALSE),
+distribution.model = "std")
+
+garch.specnorm = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = FALSE),
+distribution.model = "norm")
+```
+
+```{r}
+garch.specstd = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = FALSE),
+distribution.model = "std")
+
+garch.specnorm = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = FALSE),
+distribution.model = "norm")
+
+egarch.specstd = ugarchspec(variance.model = list(model = 'eGARCH', garchOrder = c(1,1)), mean.model = 
+    list(armaOrder=c(0,0), include.mean = FALSE),
+    distribution.model = "std")
+
+egarch.specnorm =  ugarchspec(variance.model = list(model = 'eGARCH', garchOrder = c(1,1)), mean.model = 
+    list(armaOrder=c(0,0), include.mean = FALSE),
+    distribution.model = "norm")
+
+gjr.specstd = ugarchspec(variance.model = list(model = 'gjrGARCH', garchOrder = c(1,1)), mean.model = 
+    list(armaOrder=c(0,0), include.mean = FALSE),
+    distribution.model = "std")
+
+gjr.specnorm = ugarchspec(variance.model = list(model = 'gjrGARCH', garchOrder = c(1,1)), mean.model = 
+    list(armaOrder=c(0,0), include.mean = FALSE),
+    distribution.model = "norm")
+```
+
+```{r}
+garch.fit.std = ugarchfit(garch.specstd,daily_returns)
+garch.fit.norm = ugarchfit(garch.specnorm, daily_returns)
+
+egarch.fit.std = ugarchfit(egarch.specstd, daily_returns)
+egarch.fit.norm = ugarchfit(egarch.specnorm, daily_returns)
+
+gjr.fit.std = ugarchfit(gjr.specstd, daily_returns)
+gjr.fit.norm = ugarchfit(gjr.specnorm, daily_returns)
+```
+
+```{r}
+garch.fit.norm
+garch.fit.std
+
+egarch.fit.norm
+egarch.fit.std
+
+gjr.fit.norm
+gjr
+```
+
